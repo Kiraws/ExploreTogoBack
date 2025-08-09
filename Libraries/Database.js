@@ -1,39 +1,43 @@
+// libraries/Database.js
 const { Pool } = require('pg');
 require('dotenv').config();
 
 class Database {
-    constructor() {
-      this.pool = new Pool({
-        host: process.env.DB_HOST,
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        database: process.env.DB_NAME,
-        port: process.env.DB_PORT,
-      });
-  
-      // Optional: Log when connection to the database is established
-      this.pool.on('connect', () => {
-        console.log('Connected to the PostgreSQL database');
-      });
-  
-      // Optional: Log any errors with the database connection
-      this.pool.on('error', (err) => {
-        console.error('Unexpected error on idle client', err);
-        process.exit(-1);
-      });
-    }
-  
-    async query(text, params) {
-      this.client = await this.pool.connect();
-      const res = await this.client.query(text, params);
-      await this.close();
+  constructor() {
+    this.pool = new Pool({
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      port: process.env.DB_PORT,
+    });
+
+    this.pool.on('connect', () => {
+      console.log('Connecté à la base de données PostgreSQL');
+    });
+
+    this.pool.on('error', (err) => {
+      console.error('Erreur inattendue sur le client inactif', err);
+      process.exit(-1);
+    });
+  }
+
+  async query(text, params) {
+    const client = await this.pool.connect();
+    try {
+      const res = await client.query(text, params);
       return res;
-    }
-  
-    async close() {
-      await this.client.end();
-      console.log('Closed database connection');
+    } catch (err) {
+      throw err;
+    } finally {
+      client.release();
     }
   }
-  
-  module.exports = new Database();
+
+  async close() {
+    await this.pool.end();
+    console.log('Connexion à la base de données fermée');
+  }
+}
+
+module.exports = new Database();

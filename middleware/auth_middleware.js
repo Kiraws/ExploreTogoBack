@@ -1,29 +1,38 @@
-require('dotenv').config();
-const jwt = require('../Libraries/Jwt')
-const db = require('../Libraries/Database')
+// middleware/authMiddleware.js
+const jwt = require('../libraries/JWT');
 
-module.exports = async (req, res, next) => {
-    let token = req.headers.authorization || req.headers.Authorization;
-    token = token.split(" ")[1]
-    try {
-        let { userId } = await jwt.verifyToken(token)
-        const user = await db.query(`SELECT email from users where userid =$1`, [userId])
-        if (user.rowCount > 0) {
-            req.userId = userId
-            return next()
-        }
-        return res.status(400).json({
-            "status": "Bad Request",
-            "message": "Client error",
-            "statusCode": 400
-        })
-    } catch (error) {
-        console.log(error)
-        return res.status(400).json({
-            "status": "Bad Request",
-            "message": "Client error",
-            "statusCode": 400
-        })
+const authMiddleware = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      status: 'Non autorisé',
+      message: 'Token manquant ou invalide',
+      statusCode: 401,
+    });
+  }
+
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = await jwt.verifyToken(token);
+    if (!decoded || !decoded.id) {
+      return res.status(401).json({
+        status: 'Non autorisé',
+        message: 'Token invalide ou mal formé',
+        statusCode: 401,
+      });
     }
 
-}
+    req.userId = decoded.id; // Stocke l'ID de l'utilisateur pour les routes suivantes
+    next();
+  } catch (err) {
+    console.error('Erreur de vérification du token:', err.message);
+    return res.status(401).json({
+      status: 'Non autorisé',
+      message: 'Token invalide ou expiré',
+      statusCode: 401,
+      error: err.message,
+    });
+  }
+};
+
+module.exports = authMiddleware;

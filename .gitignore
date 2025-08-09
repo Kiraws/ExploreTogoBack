@@ -1,0 +1,25 @@
+# Ignorer les dépendances Node.js
+node_modules/
+
+# Ignorer les fichiers de configuration et d'environnement
+.env
+
+# Ignorer les fichiers de verrouillage des dépendances
+package-lock.json
+
+# Ignorer les fichiers de logs et de cache
+*.log
+*.cache
+
+# Ignorer les fichiers spécifiques à l'IDE ou à l'éditeur
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Ignorer les fichiers de build et de distribution
+dist/
+build/
+
+# Ignorer les fichiers de configuration de l'OS
+.DS_Store
