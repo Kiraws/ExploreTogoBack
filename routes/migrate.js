@@ -24,6 +24,7 @@ router.all('/', async (req, res) => {
       DROP TABLE IF EXISTS "Notifications" CASCADE;
       DROP TABLE IF EXISTS "Images" CASCADE;
       DROP TABLE IF EXISTS "Lieu" CASCADE;
+      DROP TABLE IF EXISTS "Sessions" CASCADE;
       DROP TABLE IF EXISTS "User" CASCADE;
 
       -- Supprimer les types énumérés existants
@@ -50,6 +51,18 @@ router.all('/', async (req, res) => {
         PRIMARY KEY(id),
         UNIQUE(email)
       );
+
+      -- Créer la table Sessions
+      CREATE TABLE "Sessions" (
+        id BIGINT GENERATED ALWAYS AS IDENTITY,
+        user_id BIGINT NOT NULL,
+        token TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP NOT NULL,
+        PRIMARY KEY(id),
+        FOREIGN KEY(user_id) REFERENCES "User"(id) ON DELETE CASCADE
+      );
+
 
       -- Créer la table Lieu avec la colonne geometry (requiert l'extension PostGIS)
       CREATE TABLE "Lieu" (
