@@ -1,4 +1,3 @@
-// routes/auth.js
 const express = require('express');
 const router = express.Router();
 const db = require('../libraries/Database');
@@ -6,10 +5,10 @@ const jwt = require('../libraries/JWT');
 const bcrypt = require('bcrypt');
 const { userSchema, loginSchema } = require('../schemas/userSchema');
 const z = require('zod');
-const nodemailer = require('nodemailer'); // Importe nodemailer
-require('dotenv').config(); // Charge les variables d'environnement depuis .env
+const nodemailer = require('nodemailer');
+const authMiddleware = require('../middleware/auth_middleware');
+require('dotenv').config();
 
-// Configure le transporteur nodemailer pour Mailtrap
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
   port: process.env.EMAIL_PORT,
@@ -19,126 +18,87 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Applique le middleware d'authentification aux routes nécessitant une authentification
-router.use('/logout', require('../middleware/auth_middleware')); // Appliqué spécifiquement à /logout
-router.use('/delete-account', require('../middleware/auth_middleware')); // Appliqué à /delete-account
+// Applique le middleware aux routes protégées
+router.use('/logout', authMiddleware);
+router.use('/delete-account', authMiddleware);
+router.use('/active-sessions', authMiddleware);
 
-// Route POST pour enregistrer un nouvel utilisateur
+// POST /register
 router.post('/register', async (req, res) => {
   try {
     const data = userSchema.parse(req.body);
     const existingUser = await db.query('SELECT id FROM "User" WHERE email = $1', [data.email]);
     if (existingUser.rowCount > 0) {
-      return res.status(400).json({
-        status: 'Erreur',
-        message: 'Cet email est déjà utilisé',
-        statusCode: 400,
-      });
+      return res.status(400).json({ status: 'Erreur', message: 'Cet email est déjà utilisé' });
     }
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(data.password, saltRounds);
+    const hashedPassword = await bcrypt.hash(data.password, 10);
     const result = await db.query(
       `INSERT INTO "User" (name, firstname, genre, email, password, role, active)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id, name, firstname, email, role`,
       [data.name, data.firstname, data.genre || null, data.email, hashedPassword, data.role, data.active]
     );
-    const token = await jwt.generateToken({ id: result.rows[0].id });
-    return res.status(201).json({
-      status: 'Succès',
-      message: 'Inscription réussie',
-      data: { accessToken: token, user: result.rows[0] },
-    });
+    const token = await jwt.generateToken({ id: result.rows[0].id, role: result.rows[0].role });
+    return res.status(201).json({ status: 'Succès', message: 'Inscription réussie', data: { accessToken: token, user: result.rows[0] } });
   } catch (err) {
     if (err instanceof z.ZodError) {
-      return res.status(422).json({
-        status: 'Erreur',
-        message: 'Données invalides',
-        errors: err.errors,
-      });
+      return res.status(422).json({ status: 'Erreur', message: 'Données invalides', errors: err.errors });
     }
-    console.error(err);
-    return res.status(400).json({
-      status: 'Erreur',
-      message: "Échec de l'inscription",
-      statusCode: 400,
-      error: err.message,
-    });
+    return res.status(400).json({ status: 'Erreur', message: "Échec de l'inscription", error: err.message });
   }
 });
 
-// Route POST pour authentifier un utilisateur
+// POST /login
 router.post('/login', async (req, res) => {
   try {
     const data = loginSchema.parse(req.body);
     const user = await db.query('SELECT * FROM "User" WHERE email = $1', [data.email]);
-    if (user.rowCount === 0) {
-      return res.status(401).json({
-        status: 'Erreur',
-        message: 'Utilisateur non trouvé',
-        statusCode: 401,
-      });
-    }
+    if (user.rowCount === 0) return res.status(401).json({ status: 'Erreur', message: 'Utilisateur non trouvé' });
+
     const isMatch = await bcrypt.compare(data.password, user.rows[0].password);
-    if (!isMatch) {
-      return res.status(401).json({
-        status: 'Erreur',
-        message: 'Mot de passe incorrect',
-        statusCode: 401,
-      });
-    }
-    const token = await jwt.generateToken({ id: user.rows[0].id });
+    if (!isMatch) return res.status(401).json({ status: 'Erreur', message: 'Mot de passe incorrect' });
+
+    const token = await jwt.generateToken({ id: user.rows[0].id, role: user.rows[0].role });
+    const expiresAt = new Date(Date.now() + (parseInt(process.env.JWT_EXPIRES_IN_HOURS || 1) * 60 * 60 * 1000));
+
+    await db.query('DELETE FROM "Sessions" WHERE user_id = $1', [user.rows[0].id]); // Supprimer anciennes sessions
+    await db.query(`INSERT INTO "Sessions" (user_id, token, expires_at) VALUES ($1, $2, $3)`, [user.rows[0].id, token, expiresAt]);
+
     return res.status(200).json({
       status: 'Succès',
       message: 'Connexion réussie',
       data: {
         accessToken: token,
-        user: {
-          id: user.rows[0].id,
-          name: user.rows[0].name,
-          firstname: user.rows[0].firstname,
-          email: user.rows[0].email,
-          role: user.rows[0].role,
-        },
-      },
+        user: { id: user.rows[0].id, name: user.rows[0].name, firstname: user.rows[0].firstname, email: user.rows[0].email, role: user.rows[0].role }
+      }
     });
   } catch (err) {
-    if (err instanceof z.ZodError) {
-      return res.status(422).json({
-        status: 'Erreur',
-        message: 'Données invalides',
-        errors: err.errors,
-      });
-    }
-    console.error(err);
-    return res.status(401).json({
-      status: 'Erreur',
-      message: 'Authentification échouée',
-      statusCode: 401,
-      error: err.message,
-    });
+    return res.status(401).json({ status: 'Erreur', message: 'Authentification échouée', error: err.message });
   }
 });
 
-// Route POST pour déconnecter un utilisateur
+// POST /logout
 router.post('/logout', async (req, res) => {
   try {
-    const token = req.headers.authorization.split(' ')[1]; // Déjà validé par le middleware
-    // Pas d'invalidation serveur, la déconnexion est gérée côté client
-    return res.status(200).json({
-      status: 'Succès',
-      message: 'Déconnexion réussie',
-    });
+    const token = req.headers.authorization.split(' ')[1];
+    await db.query(`DELETE FROM "Sessions" WHERE token = $1`, [token]);
+    return res.status(200).json({ status: 'Succès', message: 'Déconnexion réussie' });
   } catch (err) {
-    console.error('Erreur lors de la déconnexion:', err.message);
-    return res.status(400).json({
-      status: 'Erreur',
-      message: 'Échec de la déconnexion',
-      statusCode: 400,
-      error: err.message,
-    });
+    return res.status(400).json({ status: 'Erreur', message: 'Échec de la déconnexion', error: err.message });
   }
 });
+
+// GET /active-sessions
+router.get('/active-sessions', async (req, res) => {
+  const sessions = await db.query(
+    `SELECT s.id, s.created_at, s.expires_at, u.name, u.firstname, u.role
+     FROM "Sessions" s
+     JOIN "User" u ON s.user_id = u.id
+     WHERE s.expires_at > NOW()`
+  );
+  res.json({ activeSessions: sessions.rows });
+});
+
 
 // Route POST pour gérer la réinitialisation du mot de passe (oubli)
 router.post('/forgot-password', async (req, res) => {
