@@ -54,8 +54,10 @@ router.all('/', async (req, res) => {
       -- Créer la table Lieu avec la colonne geometry (requiert l'extension PostGIS)
       CREATE TABLE "Lieu" (
         id BIGINT GENERATED ALWAYS AS IDENTITY,
+        etab_images TEXT[],
         region_nom VARCHAR(50) NOT NULL,
         prefecture_nom VARCHAR(50) NOT NULL,
+        commune_nom VARCHAR(50) NOT NULL,
         canton_nom VARCHAR(100) NOT NULL,
         nom_localite VARCHAR(100),
         etab_nom VARCHAR(255) NOT NULL,
@@ -63,9 +65,10 @@ router.all('/', async (req, res) => {
         toilette_type VARCHAR(50),
         etab_adresse VARCHAR(255),
         type VARCHAR(50) NOT NULL,
+        description TEXT,
         activite_statut VARCHAR(50),
         activite_categorie VARCHAR(50),
-        etab_creation_date DATE,
+        etab_creation_date VARCHAR(50),
         geometry GEOMETRY NOT NULL, -- Type générique pour accepter POINT, POLYGON, MULTIPOLYGON
         status BOOLEAN NOT NULL DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -123,7 +126,6 @@ router.all('/', async (req, res) => {
       -- Créer la table Hotels
       CREATE TABLE "Hotels" (
         id BIGINT,
-        toilette_type VARCHAR(50),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY(id),

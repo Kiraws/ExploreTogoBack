@@ -161,7 +161,7 @@ router.post('/forgot-password', async (req, res) => {
       });
     }
 
-    const resetToken = await jwt.generateToken({ id: user.rows[0].id, type: 'reset' }, '1h'); // Valable 1 heure
+    const resetToken = await jwt.generateToken({ id: user.rows[0].id, type: 'reset' }); // Valable 1 heure
 
     // Envoie l'email à une inbox fictive de Mailtrap
     const mailOptions = {
