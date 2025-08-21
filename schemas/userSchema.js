@@ -16,4 +16,7 @@ const loginSchema = z.object({
   password: z.string().min(6, 'Le mot de passe doit contenir au moins 6 caractères'),
 });
 
-module.exports = { userSchema, loginSchema };
+module.exports = {
+  userSchema,
+  loginSchema
+};

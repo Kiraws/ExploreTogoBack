@@ -23,3 +23,5 @@ build/
 
 # Ignorer les fichiers de configuration de l'OS
 .DS_Store
+
+/generated/prisma

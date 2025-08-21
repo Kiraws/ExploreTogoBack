@@ -1,0 +1,274 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis]
+}
+
+model User {
+  id            String          @id @default(cuid())
+  name          String          @db.VarChar(100)
+  firstname     String          @db.VarChar(100)
+  genre         Genre
+  email         String          @unique @db.VarChar(255)
+  password      String          @db.VarChar(255)
+  role          Role            @default(utilisateur)
+  active        Boolean         @default(true)
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @default(now()) @map("updated_at")
+  favorites     Favorites[]
+  likes         Likes[]
+  notifications Notifications[]
+  reservations  Reservations[]
+
+  @@map("User")
+}
+
+model Lieu {
+  id                        BigInt                      @id @default(autoincrement())
+  etabImages                String[]                    @map("etab_images")
+  regionNom                 String                      @map("region_nom") @db.VarChar(50)
+  prefectureNom             String                      @map("prefecture_nom") @db.VarChar(50)
+  communeNom                String                      @map("commune_nom") @db.VarChar(50)
+  cantonNom                 String                      @map("canton_nom") @db.VarChar(100)
+  nomLocalite               String?                     @map("nom_localite") @db.VarChar(100)
+  etabNom                   String                      @map("etab_nom") @db.VarChar(255)
+  etabJour                  String[]                    @map("etab_jour")
+  toiletteType              String?                     @map("toilette_type") @db.VarChar(50)
+  etabAdresse               String?                     @map("etab_adresse") @db.VarChar(255)
+  type                      String                      @map("type") @db.VarChar(50)
+  description               String?
+  activiteStatut            String?                     @map("activite_statut") @db.VarChar(50)
+  activiteCategorie         String?                     @map("activite_categorie") @db.VarChar(50)
+  etabCreationDate          String?                     @map("etab_creation_date") @db.VarChar(50)
+  geometry                  Unsupported("geometry")     @map("geometry")
+  status                    Boolean                     @default(true)
+  createdAt                 DateTime                    @default(now()) @map("created_at")
+  updatedAt                 DateTime                    @default(now()) @map("updated_at")
+  etablissementTouristique  Etablissement_Touristique?
+  favorites                 Favorites[]
+  hotels                    Hotels?
+  images                    Images[]
+  likes                     Likes[]
+  loisirs                   Loisirs?
+  marches                   Marches?
+  parcsJardins              Parcs_Jardins?
+  reservations              Reservations[]
+  sitesNaturels             Sites_Naturels?
+  supermarchesEtablissement Supermarches_Etablissement?
+  zonesProtegees            Zones_Protegees?
+
+  @@map("Lieu")
+}
+
+model Images {
+  idImage   BigInt   @id @default(autoincrement()) @map("id_image")
+  lieuId    BigInt   @map("lieu_id")
+  imageUrl  String   @map("image_url") @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+  lieu      Lieu     @relation(fields: [lieuId], references: [id], onDelete: Cascade)
+
+  @@map("Images")
+}
+
+model Notifications {
+  idNotification   BigInt   @id @default(autoincrement()) @map("id_notification")
+  message          String
+  typeNotification String   @map("typeNotification") @db.VarChar(50)
+  isRead           Boolean  @default(false) @map("is_read")
+  createdAt        DateTime @default(now()) @map("created_at")
+  userId           String   @map("user_id")
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("Notifications")
+}
+
+model Likes {
+  idLike    BigInt   @id @default(autoincrement()) @map("id_like")
+  createdAt DateTime @default(now()) @map("created_at")
+  userId    String   @map("user_id")
+  lieuId    BigInt   @map("lieu_id")
+  lieu      Lieu     @relation(fields: [lieuId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, lieuId])
+  @@map("Likes")
+}
+
+model Loisirs {
+  id                BigInt   @id
+  etablissementType String   @map("etablissement_type") @db.VarChar(50)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @default(now()) @map("updated_at")
+  lieu              Lieu     @relation(fields: [id], references: [id], onDelete: Cascade)
+  menus             Menu[]
+
+  @@map("Loisirs")
+}
+
+model Hotels {
+  id        BigInt   @id
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @map("updated_at")
+  lieu      Lieu     @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  @@map("Hotels")
+}
+
+model Parcs_Jardins {
+  id        BigInt   @id
+  terrain   String   @db.VarChar(50)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @map("updated_at")
+  lieu      Lieu     @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  @@map("Parcs_Jardins")
+}
+
+model Marches {
+  id        BigInt   @id
+  organisme String   @db.VarChar(50)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @map("updated_at")
+  lieu      Lieu     @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  @@map("Marches")
+}
+
+model Sites_Naturels {
+  id               BigInt   @id
+  typeSiteDeux     String   @map("type_site_deux") @db.VarChar(50)
+  ministereTutelle String   @map("ministere_tutelle") @db.VarChar(50)
+  religion         String   @db.VarChar(50)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @default(now()) @map("updated_at")
+  lieu             Lieu     @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  @@map("Sites_Naturels")
+}
+
+model Zones_Protegees {
+  id        BigInt   @id
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @map("updated_at")
+  lieu      Lieu     @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  @@map("Zones_Protegees")
+}
+
+model Supermarches_Etablissement {
+  id        BigInt   @id
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @map("updated_at")
+  lieu      Lieu     @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  @@map("Supermarches_Etablissement")
+}
+
+model Etablissement_Touristique {
+  id        BigInt   @id
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @map("updated_at")
+  lieu      Lieu     @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  @@map("Etablissement_Touristique")
+}
+
+model Reservations {
+  idReservation    BigInt            @id @default(autoincrement()) @map("id_reservation")
+  status           ReservationStatus @default(en_attente)
+  dateReservation  DateTime          @map("date_reservation") @db.Date
+  heureReservation DateTime          @map("heure_reservation") @db.Time(6)
+  nbPlace          Int               @map("nb_place")
+  userContact      String            @map("user_contact") @db.VarChar(255)
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @default(now()) @map("updated_at")
+  userId           String            @map("user_id")
+  lieuId           BigInt            @map("lieu_id")
+  lieu             Lieu              @relation(fields: [lieuId], references: [id])
+  user             User              @relation(fields: [userId], references: [id])
+
+  @@map("Reservations")
+}
+
+model Menu {
+  idMenu      String          @id @map("id_Menu") @db.VarChar(50)
+  nomMenu     String          @map("nom_Menu") @db.VarChar(100)
+  description String
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @default(now()) @map("updated_at")
+  loisirId    BigInt          @map("loisir_id")
+  categories  CategoriePlat[]
+  loisirs     Loisirs         @relation(fields: [loisirId], references: [id])
+
+  @@map("Menu")
+}
+
+model Favorites {
+  idFavorite BigInt   @id @default(autoincrement()) @map("id_favorite")
+  createdAt  DateTime @default(now()) @map("created_at")
+  lieuId     BigInt   @map("lieu_id")
+  userId     String   @map("user_id")
+  lieu       Lieu     @relation(fields: [lieuId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, lieuId])
+  @@map("Favorites")
+}
+
+model CategoriePlat {
+  idCategorie  String   @id @map("idCategorie") @db.VarChar(50)
+  nomCategorie String   @map("nom_Categorie") @db.VarChar(100)
+  description  String
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @map("updated_at")
+  idMenu       String   @map("id_Menu")
+  menu         Menu     @relation(fields: [idMenu], references: [idMenu])
+  plats        Plat[]
+
+  @@map("CategoriePlat")
+}
+
+model Plat {
+  idPlat      BigInt        @id @default(autoincrement()) @map("id_plat")
+  nomPlat     String        @map("nom_plat") @db.VarChar(100)
+  description String
+  prix        Decimal       @db.Decimal(10, 2)
+  disponible  Boolean       @default(true)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @default(now()) @map("updated_at")
+  idCategorie String        @map("idCategorie")
+  categorie   CategoriePlat @relation(fields: [idCategorie], references: [idCategorie])
+
+  @@map("Plat")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model spatial_ref_sys {
+  srid      Int     @id
+  auth_name String? @db.VarChar(256)
+  auth_srid Int?
+  srtext    String? @db.VarChar(2048)
+  proj4text String? @db.VarChar(2048)
+}
+
+enum Genre {
+  masculin
+  feminin
+}
+
+enum Role {
+  admin
+  utilisateur
+  gerant
+}
+
+enum ReservationStatus {
+  en_attente
+  confirmee
+  annulee
+}

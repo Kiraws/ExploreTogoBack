@@ -767,39 +767,39 @@ Voici des exemples de données que vous pouvez utiliser pour tester les différe
 ### 2. Création d'un lieu de type Loisirs
 ```json
 {
-    "region_nom": "Lomé",
-    "prefecture_nom": "Golfe",
-    "commune_nom": "Commune Loisirs",
-    "canton_nom": "Lomé-Carrefour",
-    "etab_nom": "Parc de la Cité",
-    "etab_jour": [
+    "regionNom": "Lomé",
+    "prefectureNom": "Golfe",
+    "communeNom": "Commune Loisirs",
+    "cantonNom": "Lomé-Carrefour",
+    "etabNom": "Parc de la Cité",
+    "etabJour": [
         "lundi",
         "mardi",
         "mercredi",
         "jeudi",
         "vendredi"
     ],
-    "etab_adresse": "Rue de la Cité",
+    "etabAdresse": "Rue de la Cité",
     "type": "loisirs",
     "geometry": "POINT(1.23456 6.78901)",
     "status": true,
-    "etablissement_type": "Parc public"
+    "etablissementType": "Parc public"
 }
 ```
 
 ### 3. Création d'un hôtel
 ```json
 {
- "region_nom": "Lomé",
-  "prefecture_nom": "Golfe",
-  "commune_nom": "Commune Hotel",
-  "canton_nom": "Lomé-Carrefour",
-  "nom_localite": "Agoe",
-  "etab_nom": "Hôtel du Lac",
-  "toilette_type":"Nsp",
-  "type": "hotels",
-  "geometry": "POINT(1.23456 6.78901)",
-  "status": true
+    "regionNom": "Lomé",
+    "prefectureNom": "Golfe",
+    "communeNom": "Commune Hotel",
+    "cantonNom": "Lomé-Carrefour",
+    "nomLocalite": "Agoe",
+    "etabNom": "Hôtel du Lac",
+    "toiletteType": "Nsp",
+    "type": "hotels",
+    "geometry": "POINT(1.23456 6.78901)",
+    "status": true
 }
 
 ```
@@ -807,22 +807,22 @@ Voici des exemples de données que vous pouvez utiliser pour tester les différe
 ### 4. Création d'un parc
 ```json
 {
-    "region_nom": "Lomé",
-    "prefecture_nom": "Golfe",
-    "commune_nom": "Commune Parc",
-    "canton_nom": "Lomé-Carrefour",
-    "nom_localite": "Agoe",
-    "etab_nom": "Parc National",
-    "etab_jour": [
+    "regionNom": "Lomé",
+    "prefectureNom": "Golfe",
+    "communeNom": "Commune Parc",
+    "cantonNom": "Lomé-Carrefour",
+    "nomLocalite": "Agoe",
+    "etabNom": "Parc National",
+    "etabJour": [
         "mardi",
         "jeudi",
         "samedi"
     ],
-    "toilette_type": "WCs",
-    "etab_adresse": "Rue du Parc",
+    "toiletteType": "WCs",
+    "etabAdresse": "Rue du Parc",
     "type": "parcs",
-    "activite_statut": "Construit et Utilise",
-    "activite_categorie": "Jardin ou parc public",
+    "activiteStatut": "Construit et Utilise",
+    "activiteCategorie": "Jardin ou parc public",
     "geometry": "POINT(1.23456 6.78901)",
     "status": true,
     "terrain": "mouille"
@@ -833,92 +833,91 @@ Voici des exemples de données que vous pouvez utiliser pour tester les différe
 ### 5. Création d'un marché
 ```json
 {
-  "region_nom": "Lomé",
-  "prefecture_nom": "Golfe",
-  "commune_nom": "Commune Marché",
-  "canton_nom": "Lomé-Carrefour",
-  "nom_localite": "Agoe",
-  "etab_nom": "Marché Central",
-  "etab_jour": ["lundi", "mercredi", "vendredi", "dimanche"],
-  "type": "marches",
-  "geometry": "MULTIPOLYGON (((1.163437915407828 6.2172876530162045, 1.1637067235937115 6.217401180876223, 1.1638402492285291 6.217144433219377, 1.1636786129337497 6.2170081997179105, 1.1635117058902276 6.217147926385619, 1.163437915407828 6.2172876530162045)))",
-  "status": true,
-  "organisme": "Non"
-
+    "regionNom": "Lomé",
+    "prefectureNom": "Golfe",
+    "communeNom": "Commune Marché",
+    "cantonNom": "Lomé-Carrefour",
+    "nomLocalite": "Agoe",
+    "etabNom": "Marché Central",
+    "etabJour": ["lundi", "mercredi", "vendredi", "dimanche"],
+    "type": "marches",
+    "geometry": "MULTIPOLYGON (((1.163437915407828 6.2172876530162045, 1.1637067235937115 6.217401180876223, 1.1638402492285291 6.217144433219377, 1.1636786129337497 6.2170081997179105, 1.1635117058902276 6.217147926385619, 1.163437915407828 6.2172876530162045)))",
+    "status": true,
+    "organisme": "Non"
 }
 ```
 
 ### 6. Création d'un site naturel
 ```json
 {
-  "region_nom": "Lomé",
-  "prefecture_nom": "Golfe",
-  "commune_nom": "Commune Site",
-  "canton_nom": "Lomé-Carrefour",
-  "nom_localite": "Agoe",
-  "etab_nom": "Cascade de la Paix",
-  "etab_jour": ["lundi", "mardi", "mercredi", "dimanche"],
-  "etab_adresse": "Rue de la Nature",
-  "type": "sites",
-  "geometry": "POLYGON ((1.223154527547324 6.118307122542037, 1.2232763610781885 6.1182614349679625, 1.223377889020575 6.12177937817167, 1.2232662082839494 6.121804760157267, 1.2231646803415626 6.118317275336275, 1.223154527547324 6.118307122542037))",
-  "status": true,
-  "type_site_deux": "Cascade",
-  "ministere_tutelle": "Ministère de l'Environnement",
-  "religion": "Néant"
+    "regionNom": "Lomé",
+    "prefectureNom": "Golfe",
+    "communeNom": "Commune Site",
+    "cantonNom": "Lomé-Carrefour",
+    "nomLocalite": "Agoe",
+    "etabNom": "Cascade de la Paix",
+    "etabJour": ["lundi", "mardi", "mercredi", "dimanche"],
+    "etabAdresse": "Rue de la Nature",
+    "type": "sites",
+    "geometry": "POLYGON ((1.223154527547324 6.118307122542037, 1.2232763610781885 6.1182614349679625, 1.223377889020575 6.12177937817167, 1.2232662082839494 6.121804760157267, 1.2231646803415626 6.118317275336275, 1.223154527547324 6.118307122542037))",
+    "status": true,
+    "typeSiteDeux": "Cascade",
+    "ministereTutelle": "Ministère de l'Environnement",
+    "religion": "Néant"
 }
 ```
 
 ### 7. Création d'une zone protégée
 ```json
 {
-  "region_nom": "Lomé",
-  "prefecture_nom": "Golfe",
-  "commune_nom": "Commune Zone",
-  "canton_nom": "Lomé-Carrefour",
-  "nom_localite": "Agoe",
-  "etab_nom": "Réserve Naturelle",
-  "type": "zones",
-  "etab_creation_date": "2025-01-05",
-  "geometry": "MULTIPOLYGON (((0.6402866912649157 7.598392552226026, 0.6507331470136135 7.594887004299956, 0.6563176188678445 7.587136505675209, 0.6568918915589389 7.585170995256224, 0.6139297197511815 7.424091506943052, 0.6085951285111206 7.4256136737699565, 0.6074459346395865 7.432918728931113, 0.6010994149904708 7.4572551426625715, 0.5959536595939284 7.464759914890751, 0.600989448864586 7.477415746316092, 0.6027142348310639 7.4867303051375504, 0.604864782491395 7.499370475980749, 0.6079761816032607 7.511357464746753, 0.6089782438227826 7.514103820412479, 0.608900974331154 7.5282139287072445, 0.6075325173036067 7.536632154576597, 0.6008412997159769 7.551111999591662, 0.602032192454366 7.556498782612563, 0.6026974785797907 7.5606742457145675, 0.6048284190389598 7.562394839993311, 0.6037389738479011 7.565877823731843, 0.6051492875758616 7.569701787029567, 0.606272005790954 7.572154874788852, 0.6077055972793381 7.57246115806724, 0.6086482697745277 7.575032618449132, 0.6097108833814089 7.577545057833325, 0.610782391681309 7.5784461584629765, 0.6107741638671513 7.579938139704646, 0.612861672792738 7.580964179720518, 0.6135208216325034 7.5807290722192615, 0.6141687926430569 7.582523062810372, 0.6237935582056722 7.5832322601439435, 0.6402866912649157 7.598392552226026)))",
-  "status": true
+    "regionNom": "Lomé",
+    "prefectureNom": "Golfe",
+    "communeNom": "Commune Zone",
+    "cantonNom": "Lomé-Carrefour",
+    "nomLocalite": "Agoe",
+    "etabNom": "Réserve Naturelle",
+    "type": "zones",
+    "etabCreationDate": "2025-01-05",
+    "geometry": "MULTIPOLYGON (((0.6402866912649157 7.598392552226026, 0.6507331470136135 7.594887004299956, 0.6563176188678445 7.587136505675209, 0.6568918915589389 7.585170995256224, 0.6139297197511815 7.424091506943052, 0.6085951285111206 7.4256136737699565, 0.6074459346395865 7.432918728931113, 0.6010994149904708 7.4572551426625715, 0.5959536595939284 7.464759914890751, 0.600989448864586 7.477415746316092, 0.6027142348310639 7.4867303051375504, 0.604864782491395 7.499370475980749, 0.6079761816032607 7.511357464746753, 0.6089782438227826 7.514103820412479, 0.608900974331154 7.5282139287072445, 0.6075325173036067 7.536632154576597, 0.6008412997159769 7.551111999591662, 0.602032192454366 7.556498782612563, 0.6026974785797907 7.5606742457145675, 0.6048284190389598 7.562394839993311, 0.6037389738479011 7.565877823731843, 0.6051492875758616 7.569701787029567, 0.606272005790954 7.572154874788852, 0.6077055972793381 7.57246115806724, 0.6086482697745277 7.575032618449132, 0.6097108833814089 7.577545057833325, 0.610782391681309 7.5784461584629765, 0.6107741638671513 7.579938139704646, 0.612861672792738 7.580964179720518, 0.6135208216325034 7.5807290722192615, 0.6141687926430569 7.582523062810372, 0.6237935582056722 7.5832322601439435, 0.6402866912649157 7.598392552226026)))",
+    "status": true
 }
 ```
 
 ### 8. Création d'un supermarché
 ```json
 {
-  "region_nom": "Lomé",
-  "prefecture_nom": "Golfe",
-  "commune_nom": "Commune Supermarché",
-  "canton_nom": "Lomé-Carrefour",
-  "nom_localite": "Agoe",
-  "etab_nom": "Supermarché Central",
-  "etab_jour": ["dimanche", "vendredi"],
-  "toilette_type": "WCs",
-  "etab_adresse": "Rue du Commerce",
-  "type": "supermarches",
-  "activite_statut": "Construit et Utilise",
-  "activite_categorie": "Commerce général",
-  "etab_creation_date": "2025-01-08",
-  "geometry": "POINT (1.4093421681262317 8.683129969667375)",
-  "status": false
+    "regionNom": "Lomé",
+    "prefectureNom": "Golfe",
+    "communeNom": "Commune Supermarché",
+    "cantonNom": "Lomé-Carrefour",
+    "nomLocalite": "Agoe",
+    "etabNom": "Supermarché Central",
+    "etabJour": ["dimanche", "vendredi"],
+    "toiletteType": "WCs",
+    "etabAdresse": "Rue du Commerce",
+    "type": "supermarches",
+    "activiteStatut": "Construit et Utilise",
+    "activiteCategorie": "Commerce général",
+    "etabCreationDate": "2025-01-08",
+    "geometry": "POINT (1.4093421681262317 8.683129969667375)",
+    "status": false
 }
 ```
 
 ### 9. Création d'un établissement touristique
 ```json
 {
-  "region_nom": "Lomé",
-  "prefecture_nom": "Golfe",
-  "commune_nom": "Commune Touristique",
-  "canton_nom": "Lomé-Carrefour",
-  "nom_localite": "Agoe",
-  "etab_nom": "Musée National",
-  "etab_jour": ["lundi"],
-  "etab_adresse": "Rue du Patrimoine",
-  "type": "touristique",
-  "geometry": "POINT (1.1971746675213817 6.225493561195468)",
-  "status": false
+    "regionNom": "Lomé",
+    "prefectureNom": "Golfe",
+    "communeNom": "Commune Touristique",
+    "cantonNom": "Lomé-Carrefour",
+    "nomLocalite": "Agoe",
+    "etabNom": "Musée National",
+    "etabJour": ["lundi"],
+    "etabAdresse": "Rue du Patrimoine",
+    "type": "touristique",
+    "geometry": "POINT (1.1971746675213817 6.225493561195468)",
+    "status": false
 }
 ```
 
