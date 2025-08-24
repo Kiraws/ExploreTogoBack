@@ -39,7 +39,7 @@ router.get('/lieux/:id', validateId, lieuController.getLieu);
 router.put('/lieux/:id', validateId, lieuController.updateLieu);
 router.delete('/lieux/:id', validateId, lieuController.deleteLieu);
 router.patch('/lieux/:id/desactivate', validateId, lieuController.desactivateLieu);
-
+router.get('/lieux', lieuController.getAllLieux);
 // ==================== ROUTES USER ====================
 router.get('/users/:id', userController.getUser);
 

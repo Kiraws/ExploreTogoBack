@@ -141,169 +141,167 @@ class LieuService {
   }
 
       /**
+/**
  * Récupérer un lieu par ID avec ses données spécialisées
  */
-    async getLieuById(id) {
-    try {
-        // Étape 1 : Récupérer le type du lieu
-        const lieuType = await prisma.lieu.findUnique({
-        where: { id: BigInt(id) },
-        select: { type: true }
-        });
+async getLieuById(id) {
+  try {
+    // Étape 1 : Récupérer le type du lieu
+    const lieuType = await prisma.lieu.findUnique({
+      where: { id: BigInt(id) },
+      select: { type: true }
+    });
 
-        if (!lieuType) {
-        return {
-            success: false,
-            error: 'Lieu non trouvé'
-        };
-        }
-
-        // Définir les champs pertinents par type, basés sur les JSON fournis
-        const fieldsByType = {
-        loisirs: [
-            'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'etabNom', 'etabJour',
-            'etabAdresse', 'type', 'geometry', 'status', 'etablissementType'
-        ],
-        hotels: [
-            'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom',
-            'toiletteType', 'type', 'geometry', 'status'
-        ],
-        parcs: [
-            'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom',
-            'etabJour', 'toiletteType', 'etabAdresse', 'type', 'activiteStatut', 'activiteCategorie',
-            'geometry', 'status', 'terrain'
-        ],
-        marches: [
-            'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom',
-            'etabJour', 'type', 'geometry', 'status', 'organisme'
-        ],
-        sites: [
-            'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom',
-            'etabJour', 'etabAdresse', 'type', 'geometry', 'status', 'typeSiteDeux',
-            'ministereTutelle', 'religion'
-        ],
-        zones: [
-            'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom',
-            'type', 'etabCreationDate', 'geometry', 'status'
-        ],
-        supermarches: [
-            'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom',
-            'etabJour', 'toiletteType', 'etabAdresse', 'type', 'activiteStatut', 'activiteCategorie',
-            'etabCreationDate', 'geometry', 'status'
-        ],
-        touristique: [
-            'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom',
-            'etabJour', 'etabAdresse', 'type', 'geometry', 'status'
-        ]
-        };
-
-        // Définir les relations à inclure en fonction du type
-        const relationMap = {
-        loisirs: { loisirs: true },
-        hotels: { hotels: true },
-        parcs: { parcsJardins: true },
-        marches: { marches: true },
-        sites: { sitesNaturels: true },
-        zones: { zonesProtegees: true },
-        supermarches: { supermarchesEtablissement: true },
-        touristique: { etablissementTouristique: true }
-        };
-
-        // Étape 2 : Récupérer le lieu avec les relations pertinentes
-        const lieu = await prisma.lieu.findUnique({
-        where: { id: BigInt(id) },
-        include: {
-            images: true,
-            likes: true,
-            favorites: true,
-            ...relationMap[lieuType.type] // Inclure uniquement la relation pertinente
-        }
-        });
-
-        if (!lieu) {
-        return {
-            success: false,
-            error: 'Lieu non trouvé'
-        };
-        }
-
-        // Étape 3 : Récupérer la géométrie avec une requête brute
-        const [geometryResult] = await prisma.$queryRaw`
-        SELECT ST_AsEWKT(geometry) AS geometry FROM "Lieu" WHERE id = ${BigInt(id)};
-        `;
-
-        // Étape 4 : Convertir les BigInt et les Date en formats sérialisables
-        const convertToSerializable = (obj) => {
-        if (!obj) return obj;
-        const newObj = { ...obj };
-        // Convertir BigInt en chaîne
-        if (newObj.id && typeof newObj.id === 'bigint') {
-            newObj.id = newObj.id.toString();
-        }
-        // Convertir Date en chaîne ISO
-        if (newObj.createdAt instanceof Date) {
-            newObj.createdAt = newObj.createdAt.toISOString();
-        }
-        if (newObj.updatedAt instanceof Date) {
-            newObj.updatedAt = newObj.updatedAt.toISOString();
-        }
-        // Appliquer récursivement aux relations
-        for (const key in newObj) {
-            if (Array.isArray(newObj[key])) {
-            newObj[key] = newObj[key].map(convertToSerializable);
-            } else if (typeof newObj[key] === 'object' && newObj[key] !== null) {
-            newObj[key] = convertToSerializable(newObj[key]);
-            }
-        }
-        return newObj;
-        };
-
-        const convertedLieu = convertToSerializable(lieu);
-
-        // Étape 5 : Filtrer les champs pertinents pour ce type de lieu
-        const pertinentFields = fieldsByType[lieuType.type] || [];
-        const filteredData = {};
-
-        pertinentFields.forEach(field => {
-        if (convertedLieu[field] !== undefined) {
-            filteredData[field] = convertedLieu[field];
-        }
-        });
-
-        // Ajouter les champs communs non listés dans fieldsByType (ex. createdAt, updatedAt, geometry)
-        filteredData.createdAt = convertedLieu.createdAt;
-        filteredData.updatedAt = convertedLieu.updatedAt;
-        filteredData.geometry = geometryResult?.geometry || null;
-
-        // Ajouter la relation pertinente
-        const relationKey = lieuType.type === 'loisirs' ? 'loisirs' :
-                            lieuType.type === 'hotels' ? 'hotels' :
-                            lieuType.type === 'parcs' ? 'parcsJardins' :
-                            lieuType.type === 'marches' ? 'marches' :
-                            lieuType.type === 'sites' ? 'sitesNaturels' :
-                            lieuType.type === 'zones' ? 'zonesProtegees' :
-                            lieuType.type === 'supermarches' ? 'supermarchesEtablissement' :
-                            'etablissementTouristique';
-
-        filteredData[relationKey] = convertedLieu[relationKey];
-
-        // Ajouter les champs généraux (images, likes, favorites)
-        filteredData.images = convertedLieu.images;
-        filteredData.likes = convertedLieu.likes;
-        filteredData.favorites = convertedLieu.favorites;
-
-        return {
-        success: true,
-        data: filteredData
-        };
-    } catch (error) {
-        console.error('Erreur lors de la récupération du lieu:', error);
-        return {
+    if (!lieuType) {
+      return {
         success: false,
-        error: error.message
-        };
+        error: 'Lieu non trouvé'
+      };
     }
+
+    // Définir les champs pertinents par type, basés sur les JSON fournis
+    const fieldsByType = {
+      loisirs: [
+        'regionNom','etabImages' ,'prefectureNom', 'communeNom', 'cantonNom', 'etabNom', 'description', 'etabJour',
+        'etabAdresse', 'type', 'geometry', 'status', 'etablissementType'
+      ],
+      hotels: [
+        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'toiletteType', 'type', 'geometry', 'status'
+      ],
+      parcs: [
+        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'etabJour', 'toiletteType', 'etabAdresse', 'type', 'activiteStatut', 'activiteCategorie',
+        'geometry', 'status', 'terrain'
+      ],
+      marches: [
+        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'etabJour', 'type', 'geometry', 'status', 'organisme'
+      ],
+      sites: [
+        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'etabJour', 'etabAdresse', 'type', 'geometry', 'status', 'typeSiteDeux',
+        'ministereTutelle', 'religion'
+      ],
+      zones: [
+        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'type', 'etabCreationDate', 'geometry', 'status'
+      ],
+      supermarches: [
+        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'etabJour', 'toiletteType', 'etabAdresse', 'type', 'activiteStatut', 'activiteCategorie',
+        'etabCreationDate', 'geometry', 'status'
+      ],
+      touristique: [
+        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'etabJour', 'etabAdresse', 'type', 'geometry', 'status'
+      ]
+    };
+
+    // Définir les relations à inclure en fonction du type
+    const relationMap = {
+      loisirs: { loisirs: true },
+      hotels: { hotels: true },
+      parcs: { parcsJardins: true },
+      marches: { marches: true },
+      sites: { sitesNaturels: true },
+      zones: { zonesProtegees: true },
+      supermarches: { supermarchesEtablissement: true },
+      touristique: { etablissementTouristique: true }
+    };
+
+    // Étape 2 : Récupérer le lieu avec les relations pertinentes
+    const lieu = await prisma.lieu.findUnique({
+      where: { id: BigInt(id) },
+      include: {
+        images: true,
+        likes: true,
+        favorites: true,
+        ...relationMap[lieuType.type] // Inclure uniquement la relation pertinente
+      }
+    });
+
+    if (!lieu) {
+      return {
+        success: false,
+        error: 'Lieu non trouvé'
+      };
     }
+
+    // Étape 3 : Récupérer la géométrie avec une requête brute
+    const [geometryResult] = await prisma.$queryRaw`
+      SELECT ST_AsEWKT(geometry) AS geometry FROM "Lieu" WHERE id = ${BigInt(id)};
+    `;
+
+    // Étape 4 : Convertir les BigInt et les Date en formats sérialisables
+    const convertToSerializable = (obj) => {
+      if (!obj) return obj;
+      const newObj = { ...obj };
+      if (newObj.id && typeof newObj.id === 'bigint') {
+        newObj.id = newObj.id.toString();
+      }
+      if (newObj.createdAt instanceof Date) {
+        newObj.createdAt = newObj.createdAt.toISOString();
+      }
+      if (newObj.updatedAt instanceof Date) {
+        newObj.updatedAt = newObj.updatedAt.toISOString();
+      }
+      for (const key in newObj) {
+        if (Array.isArray(newObj[key])) {
+          newObj[key] = newObj[key].map(convertToSerializable);
+        } else if (typeof newObj[key] === 'object' && newObj[key] !== null) {
+          newObj[key] = convertToSerializable(newObj[key]);
+        }
+      }
+      return newObj;
+    };
+
+    const convertedLieu = convertToSerializable(lieu);
+
+    // Étape 5 : Filtrer les champs pertinents pour ce type de lieu
+    const pertinentFields = fieldsByType[lieuType.type] || [];
+    const filteredData = {};
+
+    pertinentFields.forEach(field => {
+      if (convertedLieu[field] !== undefined) {
+        filteredData[field] = convertedLieu[field];
+      }
+    });
+
+    // Ajouter les champs communs non listés dans fieldsByType (ex. createdAt, updatedAt, geometry)
+    filteredData.createdAt = convertedLieu.createdAt;
+    filteredData.updatedAt = convertedLieu.updatedAt;
+    filteredData.geometry = geometryResult?.geometry || null;
+
+    // Ajouter la relation pertinente
+    const relationKey = lieuType.type === 'loisirs' ? 'loisirs' :
+                        lieuType.type === 'hotels' ? 'hotels' :
+                        lieuType.type === 'parcs' ? 'parcsJardins' :
+                        lieuType.type === 'marches' ? 'marches' :
+                        lieuType.type === 'sites' ? 'sitesNaturels' :
+                        lieuType.type === 'zones' ? 'zonesProtegees' :
+                        lieuType.type === 'supermarches' ? 'supermarchesEtablissement' :
+                        'etablissementTouristique';
+
+    filteredData[relationKey] = convertedLieu[relationKey];
+
+    // Ajouter les champs généraux (images, likes, favorites)
+    filteredData.images = convertedLieu.images;
+    filteredData.likes = convertedLieu.likes;
+    filteredData.favorites = convertedLieu.favorites;
+
+    return {
+      success: true,
+      data: filteredData
+    };
+  } catch (error) {
+    console.error('Erreur lors de la récupération du lieu:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
 
 /**
  * Mettre à jour un lieu avec ses données spécifiques
@@ -334,39 +332,39 @@ async updateLieu(id, data) {
     // Définir les champs pertinents par type, basés sur les JSON fournis
     const fieldsByType = {
       loisirs: [
-        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'etabNom', 'etabJour',
-        'etabAdresse', 'type', 'geometry', 'status', 'etablissementType'
+        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'etabNom', 'description',
+        'etabJour', 'etabAdresse', 'type', 'geometry', 'status', 'etablissementType'
       ],
       hotels: [
         'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom',
-        'toiletteType', 'type', 'geometry', 'status'
+        'toiletteType', 'description', 'type', 'geometry', 'status'
       ],
       parcs: [
         'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom',
-        'etabJour', 'toiletteType', 'etabAdresse', 'type', 'activiteStatut', 'activiteCategorie',
-        'geometry', 'status', 'terrain'
+        'etabJour', 'toiletteType', 'etabAdresse', 'description', 'type', 'activiteStatut',
+        'activiteCategorie', 'geometry', 'status', 'terrain'
       ],
       marches: [
         'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom',
-        'etabJour', 'type', 'geometry', 'status', 'organisme'
+        'etabJour', 'description', 'type', 'geometry', 'status', 'organisme'
       ],
       sites: [
         'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom',
-        'etabJour', 'etabAdresse', 'type', 'geometry', 'status', 'typeSiteDeux',
+        'etabJour', 'etabAdresse', 'description', 'type', 'geometry', 'status', 'typeSiteDeux',
         'ministereTutelle', 'religion'
       ],
       zones: [
         'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom',
-        'type', 'etabCreationDate', 'geometry', 'status'
+        'description', 'type', 'etabCreationDate', 'geometry', 'status'
       ],
       supermarches: [
         'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom',
-        'etabJour', 'toiletteType', 'etabAdresse', 'type', 'activiteStatut', 'activiteCategorie',
-        'etabCreationDate', 'geometry', 'status'
+        'etabJour', 'toiletteType', 'etabAdresse', 'description', 'type', 'activiteStatut',
+        'activiteCategorie', 'etabCreationDate', 'geometry', 'status'
       ],
       touristique: [
         'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom',
-        'etabJour', 'etabAdresse', 'type', 'geometry', 'status'
+        'etabJour', 'etabAdresse', 'description', 'type', 'geometry', 'status'
       ]
     };
 
@@ -617,6 +615,158 @@ async updateLieu(id, data) {
       };
     }
   }
+
+  /**
+ * Récupérer tous les lieux disponibles avec leurs données spécialisées
+ */
+async getAllLieux() {
+  try {
+    // Définir les champs pertinents par type
+    const fieldsByType = {
+      loisirs: [
+        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'etabNom', 'description', 'etabJour',
+        'etabAdresse', 'type', 'geometry', 'status', 'etablissementType'
+      ],
+      hotels: [
+        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'toiletteType', 'type', 'geometry', 'status'
+      ],
+      parcs: [
+        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'etabJour', 'toiletteType', 'etabAdresse', 'type', 'activiteStatut', 'activiteCategorie',
+        'geometry', 'status', 'terrain'
+      ],
+      marches: [
+        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'etabJour', 'type', 'geometry', 'status', 'organisme'
+      ],
+      sites: [
+        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'etabJour', 'etabAdresse', 'type', 'geometry', 'status', 'typeSiteDeux',
+        'ministereTutelle', 'religion'
+      ],
+      zones: [
+        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'type', 'etabCreationDate', 'geometry', 'status'
+      ],
+      supermarches: [
+        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'etabJour', 'toiletteType', 'etabAdresse', 'type', 'activiteStatut', 'activiteCategorie',
+        'etabCreationDate', 'geometry', 'status'
+      ],
+      touristique: [
+        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'etabJour', 'etabAdresse', 'type', 'geometry', 'status'
+      ]
+    };
+
+    // Définir les relations à inclure en fonction du type
+    const relationMap = {
+      loisirs: { loisirs: true },
+      hotels: { hotels: true },
+      parcs: { parcsJardins: true },
+      marches: { marches: true },
+      sites: { sitesNaturels: true },
+      zones: { zonesProtegees: true },
+      supermarches: { supermarchesEtablissement: true },
+      touristique: { etablissementTouristique: true }
+    };
+
+    // Étape 1 : Récupérer tous les lieux avec leurs relations
+    const lieux = await prisma.lieu.findMany({
+      where: { status: true }, // Ne récupérer que les lieux actifs
+      include: {
+        images: true,
+        likes: true,
+        favorites: true,
+        loisirs: true,
+        hotels: true,
+        parcsJardins: true,
+        marches: true,
+        sitesNaturels: true,
+        zonesProtegees: true,
+        supermarchesEtablissement: true,
+        etablissementTouristique: true
+      }
+    });
+
+    // Étape 2 : Récupérer la géométrie pour chaque lieu
+    const lieuxWithGeometry = await Promise.all(lieux.map(async (lieu) => {
+      const [geometryResult] = await prisma.$queryRaw`
+        SELECT ST_AsEWKT(geometry) AS geometry FROM "Lieu" WHERE id = ${BigInt(lieu.id)};
+      `;
+      return { ...lieu, geometry: geometryResult?.geometry || null };
+    }));
+
+    // Étape 3 : Convertir les BigInt et les Date en formats sérialisables
+    const convertToSerializable = (obj) => {
+      if (!obj) return obj;
+      const newObj = { ...obj };
+      if (newObj.id && typeof newObj.id === 'bigint') {
+        newObj.id = newObj.id.toString();
+      }
+      if (newObj.createdAt instanceof Date) {
+        newObj.createdAt = newObj.createdAt.toISOString();
+      }
+      if (newObj.updatedAt instanceof Date) {
+        newObj.updatedAt = newObj.updatedAt.toISOString();
+      }
+      for (const key in newObj) {
+        if (Array.isArray(newObj[key])) {
+          newObj[key] = newObj[key].map(convertToSerializable);
+        } else if (typeof newObj[key] === 'object' && newObj[key] !== null) {
+          newObj[key] = convertToSerializable(newObj[key]);
+        }
+      }
+      return newObj;
+    };
+
+    // Étape 4 : Filtrer les champs pertinents pour chaque lieu
+    const filteredLieux = lieuxWithGeometry.map(lieu => {
+      const convertedLieu = convertToSerializable(lieu);
+      const pertinentFields = fieldsByType[lieu.type] || [];
+      const filteredData = {};
+
+      pertinentFields.forEach(field => {
+        if (convertedLieu[field] !== undefined) {
+          filteredData[field] = convertedLieu[field];
+        }
+      });
+
+      filteredData.createdAt = convertedLieu.createdAt;
+      filteredData.updatedAt = convertedLieu.updatedAt;
+      filteredData.geometry = convertedLieu.geometry;
+
+      const relationKey = lieu.type === 'loisirs' ? 'loisirs' :
+                         lieu.type === 'hotels' ? 'hotels' :
+                         lieu.type === 'parcs' ? 'parcsJardins' :
+                         lieu.type === 'marches' ? 'marches' :
+                         lieu.type === 'sites' ? 'sitesNaturels' :
+                         lieu.type === 'zones' ? 'zonesProtegees' :
+                         lieu.type === 'supermarches' ? 'supermarchesEtablissement' :
+                         'etablissementTouristique';
+
+      filteredData[relationKey] = convertedLieu[relationKey];
+      filteredData.images = convertedLieu.images;
+      filteredData.likes = convertedLieu.likes;
+      filteredData.favorites = convertedLieu.favorites;
+
+      return filteredData;
+    });
+
+    return {
+      success: true,
+      data: filteredLieux,
+      message: 'Tous les lieux récupérés avec succès'
+    };
+  } catch (error) {
+    console.error('Erreur lors de la récupération des lieux:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
 
   /**
    * Valider le type de lieu
