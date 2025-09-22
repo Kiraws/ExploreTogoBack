@@ -18,42 +18,53 @@ const {
  * Créer un lieu avec gestion des images - méthode unifiée
  */
 exports.createLieu = [
-  // Middleware multer pour gérer l'upload des images
-  upload.array('images', 10), // Max 10 images
-  
+  upload.array('images', 10),
+
   async (req, res) => {
     try {
-      // 1. Traitement des images uploadées
       let imageUrls = [];
       if (req.files && req.files.length > 0) {
         imageUrls = await imageService.processUploadedImages(req.files);
       }
 
-      // 2. Préparation des données avec les URLs des images
       const requestData = {
         ...req.body,
-        etabImages: imageUrls // Ajouter les URLs des images
+        etabImages: imageUrls
       };
 
-      // 3. Validation du schéma principal
+      // ✅ Normaliser certains champs
+      if (typeof requestData.etabJour === "string") {
+        try {
+          requestData.etabJour = JSON.parse(requestData.etabJour);
+        } catch {
+          requestData.etabJour = [];
+        }
+      }
+
+      if (requestData.etablissement_type) {
+        requestData.etablissementType = requestData.etablissement_type;
+      }
+
+      if (typeof requestData.status === "string") {
+        requestData.status = requestData.status === "true";
+      }
+
+      // ✅ Validation principale
       const lieuValidation = lieuSchema.safeParse(requestData);
-      
       if (!lieuValidation.success) {
-        // Nettoyer les images uploadées en cas d'erreur de validation
         if (imageUrls.length > 0) {
           await imageService.deleteMultipleImages(imageUrls);
         }
-        
         return res.status(400).json({
           success: false,
-          error: 'Données invalides',
+          error: "Données invalides",
           details: lieuValidation.error.issues
         });
       }
 
       const validatedData = lieuValidation.data;
 
-      // 4. Validation des données spécifiques selon le type
+      // ✅ Validation spécifique par type
       let specificValidation;
       let specificData = {};
 
@@ -63,7 +74,6 @@ exports.createLieu = [
           if (specificValidation.success) {
             specificData = { etablissementType: specificValidation.data.etablissement_type };
           } else {
-            // Nettoyer les images en cas d'erreur
             if (imageUrls.length > 0) {
               await imageService.deleteMultipleImages(imageUrls);
             }
@@ -74,78 +84,37 @@ exports.createLieu = [
             });
           }
           break;
-        
         case 'parcs':
           specificValidation = parcsSchema.safeParse(requestData);
-          if (specificValidation.success) {
-            specificData = specificValidation.data;
-          } else {
-            if (imageUrls.length > 0) {
-              await imageService.deleteMultipleImages(imageUrls);
-            }
-            return res.status(400).json({
-              success: false,
-              error: 'Données spécifiques invalides pour les parcs',
-              details: specificValidation.error.errors
-            });
-          }
+          specificData = specificValidation.success ? specificValidation.data : {};
           break;
-        
         case 'marches':
           specificValidation = marchesSchema.safeParse(requestData);
-          if (specificValidation.success) {
-            specificData = specificValidation.data;
-          } else {
-            if (imageUrls.length > 0) {
-              await imageService.deleteMultipleImages(imageUrls);
-            }
-            return res.status(400).json({
-              success: false,
-              error: 'Données spécifiques invalides pour les marchés',
-              details: specificValidation.error.errors
-            });
-          }
+          specificData = specificValidation.success ? specificValidation.data : {};
           break;
-        
         case 'sites':
           specificValidation = sitesSchema.safeParse(requestData);
-          if (specificValidation.success) {
-            specificData = specificValidation.data;
-          } else {
-            if (imageUrls.length > 0) {
-              await imageService.deleteMultipleImages(imageUrls);
-            }
-            return res.status(400).json({
-              success: false,
-              error: 'Données spécifiques invalides pour les sites naturels',
-              details: specificValidation.error.errors
-            });
-          }
+          specificData = specificValidation.success ? specificValidation.data : {};
           break;
-
         case 'hotels':
           specificValidation = hotelsSchema.safeParse(requestData);
           break;
-        
         case 'zones':
           specificValidation = zonesSchema.safeParse(requestData);
           break;
-        
         case 'supermarches':
           specificValidation = supermarchesSchema.safeParse(requestData);
           break;
-        
         case 'touristique':
           specificValidation = touristiqueSchema.safeParse(requestData);
           break;
-
         default:
           if (imageUrls.length > 0) {
             await imageService.deleteMultipleImages(imageUrls);
           }
           return res.status(400).json({
             success: false,
-            error: 'Type de lieu invalide'
+            error: "Type de lieu invalide"
           });
       }
 
@@ -160,13 +129,11 @@ exports.createLieu = [
         });
       }
 
-      // 5. Préparer les données pour le service
       const lieuData = {
         ...validatedData,
         specificData: lieuService.prepareSpecificData(validatedData.type, specificData)
       };
 
-      // 6. Créer le lieu
       const result = await lieuService.createLieu(lieuData);
 
       if (result.success) {
@@ -177,24 +144,22 @@ exports.createLieu = [
           imagesCount: imageUrls.length
         });
       } else {
-        // Nettoyer les images en cas d'échec de création
         if (imageUrls.length > 0) {
           await imageService.deleteMultipleImages(imageUrls);
         }
         res.status(400).json(result);
       }
     } catch (error) {
-      console.error('Erreur dans createLieu:', error);
-      
-      // Nettoyer les images en cas d'erreur
+      console.error("Erreur dans createLieu:", error);
+
       if (req.files && req.files.length > 0) {
         const imageUrls = await imageService.processUploadedImages(req.files);
         await imageService.deleteMultipleImages(imageUrls);
       }
-      
+
       res.status(500).json({
         success: false,
-        error: 'Erreur interne du serveur',
+        error: "Erreur interne du serveur",
         message: error.message
       });
     }
@@ -204,6 +169,9 @@ exports.createLieu = [
 /**
  * Mettre à jour un lieu avec gestion des images
  */
+const path = require('path');
+
+
 exports.updateLieu = [
   upload.array('images', 10), // Nouvelles images à ajouter ou remplacer
   
@@ -229,17 +197,37 @@ exports.updateLieu = [
         return res.status(404).json(existingLieu);
       }
 
-      let finalImageUrls = (existingLieu.data.etabImages || []).map(item => {
-      if (typeof item === 'object' && item !== null) {
-        return Object.values(item).join('');
-      }
-      return item;
-    });
+      let finalImageUrls = existingLieu.data.etabImages || [];
+      console.log('finalImageUrls initial:', finalImageUrls); // Log pour débogage
+      // Normaliser les séparateurs et reconstruire les URLs décomposées
+      finalImageUrls = finalImageUrls.map(url => {
+        if (typeof url === 'string') {
+          return url.replace(/\\/g, '/');
+        }
+        if (typeof url === 'object' && url !== null) {
+          const pathParts = Object.keys(url)
+            .sort((a, b) => Number.parseInt(a) - Number.parseInt(b))
+            .map(key => url[key]);
+          const path = pathParts.join('');
+          return path ? path.replace(/\\/g, '/') : '';
+        }
+        console.warn('URL non valide dans finalImageUrls:', url);
+        return '';
+      }).filter(url => typeof url === 'string' && url !== '');
+      console.log('finalImageUrls après normalisation:', finalImageUrls); // Log pour débogage
 
       // 2. Traitement des nouvelles images si présentes
       let newImageUrls = [];
       if (req.files && req.files.length > 0) {
         newImageUrls = await imageService.processUploadedImages(req.files);
+        newImageUrls = newImageUrls.map(url => {
+          if (typeof url === 'string') {
+            return url.replace(/\\/g, '/');
+          }
+          console.warn('URL non valide dans newImageUrls:', url);
+          return '';
+        }).filter(url => typeof url === 'string' && url !== '');
+        console.log('newImageUrls:', newImageUrls); // Log pour débogage
       }
 
       // 3. Gestion du remplacement d'une image par index
@@ -261,14 +249,6 @@ exports.updateLieu = [
           });
         }
 
-        // Vérifier qu'une image a été uploadée pour le remplacement
-        if (newImageUrls.length === 0) {
-          return res.status(400).json({
-            success: false,
-            error: 'Aucune image uploadée pour le remplacement'
-          });
-        }
-
         // Supprimer l'ancienne image à l'index spécifié
         const oldImageUrl = finalImageUrls[replaceIndex];
         await imageService.deleteImage(oldImageUrl);
@@ -282,6 +262,10 @@ exports.updateLieu = [
           await imageService.deleteMultipleImages(excessImages);
           newImageUrls = newImageUrls.slice(0, 1);
         }
+      } else if (newImageUrls.length > 0) {
+        // Ajouter les nouvelles images aux images existantes
+        finalImageUrls = [...finalImageUrls, ...newImageUrls];
+        console.log('finalImageUrls après ajout:', finalImageUrls); // Log pour débogage
       }
 
       // 4. Gestion de la suppression d'images spécifiques si demandée
@@ -292,6 +276,34 @@ exports.updateLieu = [
           if (!Array.isArray(imagesToDelete)) {
             throw new Error('imagesToDelete doit être un tableau');
           }
+          console.log('imagesToDelete brut:', imagesToDelete); // Log pour débogage
+          // Normaliser les URLs dans imagesToDelete pour correspondre aux chemins locaux
+          imagesToDelete = imagesToDelete.map(url => {
+            if (typeof url === 'string') {
+              // Supprimer le préfixe http://localhost:3030/ et ajuster le chemin
+              const localPath = url.replace(/^http:\/\/localhost:3030\//, 'E:/Open Data Science/ExploreTogoBack/');
+              return localPath.replace(/\\/g, '/');
+            }
+            if (typeof url === 'object' && url !== null) {
+              const pathParts = Object.keys(url)
+                .sort((a, b) => Number.parseInt(a) - Number.parseInt(b))
+                .map(key => url[key]);
+              return pathParts.join('').replace(/\\/g, '/');
+            }
+            console.warn('URL non valide dans imagesToDelete:', url);
+            return '';
+          }).filter(url => typeof url === 'string' && url !== '');
+          console.log('imagesToDelete normalisé:', imagesToDelete); // Log pour débogage
+          console.log('finalImageUrls avant filtrage:', finalImageUrls); // Log pour débogage
+          // Vérifier que les URLs à supprimer existent dans finalImageUrls
+          imagesToDelete = imagesToDelete.filter(url => finalImageUrls.includes(url));
+          if (imagesToDelete.length === 0) {
+            console.log('Aucune image à supprimer n\'est présente dans etabImages');
+          } else {
+            await imageService.deleteMultipleImages(imagesToDelete);
+            finalImageUrls = finalImageUrls.filter(url => !imagesToDelete.includes(url));
+          }
+          console.log('finalImageUrls après filtrage:', finalImageUrls); // Log pour débogage
         } catch (error) {
           if (newImageUrls.length > 0) {
             await imageService.deleteMultipleImages(newImageUrls);
@@ -302,24 +314,18 @@ exports.updateLieu = [
             details: error.message
           });
         }
-        await imageService.deleteMultipleImages(imagesToDelete);
-        finalImageUrls = finalImageUrls.filter(url => !imagesToDelete.includes(url));
       }
 
-      // 5. Ajouter les nouvelles images non utilisées pour le remplacement
-      if (newImageUrls.length > 0 && !data.replaceImageIndex) {
-        finalImageUrls = [...finalImageUrls, ...newImageUrls];
-      }
-
-      // 6. Mettre à jour les données avec les nouvelles URLs d'images
+      // 5. Mettre à jour les données avec les nouvelles URLs d'images
       data.etabImages = finalImageUrls;
+      console.log('data.etabImages envoyé à updateLieu:', data.etabImages); // Log pour débogage
 
-      // 7. Nettoyer les champs du body
+      // 6. Nettoyer les champs du body
       delete data.imagesToDelete;
       delete data.replaceImageIndex;
 
-      // 8. Effectuer la mise à jour
-      const result = await lieuService.updateLieu(id, data);
+      // 7. Effectuer la mise à jour
+      const result = await lieuService.updateLieu(id, data, req.files);
 
       if (result.success) {
         res.status(200).json(result);

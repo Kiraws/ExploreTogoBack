@@ -1,33 +1,39 @@
 const express = require('express');
+const cors = require('cors');
 const apiRoute = require('./routes/api');
 const authRoute = require('./routes/auth');
 const authMiddleware = require('./middleware/auth_middleware');
 const passport = require('./config/passport');
 const session = require('express-session');
 require('dotenv').config();
-console.log('JWT_SECRET:', process.env.JWT_SECRET);
 const path = require('path');
 
 const app = express();
 const port = process.env.PORT;
 
+// Configuration CORS corrigée : origine spécifique pour permettre credentials
+app.use(cors({
+  origin: 'http://localhost:3000', // Origine exacte de votre frontend
+  credentials: true, // Autorise les cookies et credentials
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS','PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization'], // Autorise le header Authorization pour Bearer
+  exposedHeaders: ['Content-Range', 'X-Content-Range']
+}));
+
 // Configuration pour servir les fichiers statiques (images)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Middleware pour gérer les erreurs CORS si nécessaire
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  next();
-});
+// SUPPRIMEZ ce middleware manuel qui cause le conflit CORS
+// app.use((req, res, next) => {
+//   res.header('Access-Control-Allow-Origin', '*');
+//   ...
+// });
 
-// Route pour tester l'accès aux images
+// Route pour tester l'accès aux images (inchangée)
 app.get('/test-image/:filename', (req, res) => {
   const filename = req.params.filename;
   const imagePath = path.join(__dirname, 'uploads', 'lieux', filename);
   
-  // Vérifier si le fichier existe
   require('fs').access(imagePath, require('fs').constants.F_OK, (err) => {
     if (err) {
       return res.status(404).json({ 
@@ -40,7 +46,7 @@ app.get('/test-image/:filename', (req, res) => {
   });
 });
 
-// Endpoint pour supprimer une image spécifique
+// Endpoint pour supprimer une image spécifique (inchangé)
 app.delete('/api/images/:filename', async (req, res) => {
   try {
     const imageService = require('./services/ImageService');
@@ -104,7 +110,6 @@ app.use((err, req, res, next) => {
   });
   next();
 });
-
 
 app.listen(port, () => {
   console.log(`Serveur démarré sur le port ${port}`);

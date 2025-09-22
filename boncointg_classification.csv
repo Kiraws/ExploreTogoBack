@@ -1,0 +1,12 @@
+ID_Type,Nom_Categorie,Description,Mots_Cles_Principaux,
+1,"GASTRONOMIE & BOISSONS","Questions sur la nourriture, les plats locaux, les boissons traditionnelles et où les trouver","plats,nourriture,boissons,cuisine,manger,restaurant,sodabi,tchoukoutou,fufu,épicé"
+2,"TRANSPORT & DÉPLACEMENTS","Questions sur les moyens de transport, trajets et modalités de déplacement","transport,voyage,bus,taxi,moto,train,déplacement,trajet,aller,comment"
+3,"HÉBERGEMENT & LOGEMENT","Questions sur les hôtels, auberges, réservations et types d'hébergement disponibles","hôtel,auberge,logement,dormir,chambre,hébergement,réserver,pas cher"
+4,"SITES TOURISTIQUES & ATTRACTIONS","Questions sur les lieux à visiter, monuments, parcs et attractions touristiques","site,tourisme,visiter,monument,parc,attraction,musée,incontournable,célèbre"
+5,"CULTURE & TRADITIONS","Questions sur les festivals, traditions, langues, habits traditionnels et patrimoine culturel","culture,tradition,festival,langue,habit,traditionnel,éwé,kabyè,kente,musique"
+6,"NATURE & ACTIVITÉS OUTDOOR","Questions sur les activités de plein air, randonnées, plages, cascades et paysages naturels","nature,plage,cascade,randonnée,montagne,outdoor,baignade,forêt,paysage,mont"
+7,"SHOPPING & ARTISANAT","Questions sur les achats, souvenirs, marchés et artisanat local","shopping,souvenir,marché,artisanat,acheter,pagne,sculpture,bijoux,épices"
+8,"INFORMATIONS PRATIQUES & FORMALITÉS","Questions sur les visas, documents, monnaie, cartes bancaires et aspects administratifs","visa,document,passeport,monnaie,CFA,euro,carte,bancaire,sécurité,formalité"
+9,"SERVICES & RÉSERVATIONS","Questions demandant au chatbot d'effectuer des réservations, achats ou services impossibles à réaliser","réserver,acheter,organiser,appeler,envoyer,trouver,service,réservation,ticket"
+10,"MÉTÉO & INFORMATIONS TEMPS RÉEL","Questions demandant des informations météorologiques et climatiques","météo,temps,climat,saison,période,aujourd'hui,maintenant,actuel"
+11,"PRIX & COÛTS","Questions sur les tarifs, coûts, budgets et informations tarifaires","prix,coût,coûte,combien,tarif,budget,cher,FCFA,euro,taux,change,billet"

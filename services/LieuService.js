@@ -1,5 +1,5 @@
 const prisma = require('../Libraries/prisma');
-
+const imageService = require('../services/ImageService');
 class LieuService {
   
   /**
@@ -142,83 +142,14 @@ class LieuService {
 
       /**
 /**
- * Récupérer un lieu par ID avec ses données spécialisées
+ * Mettre à jour un lieu avec ses données spécifiques
  */
-async getLieuById(id) {
+async updateLieu(id, data, files) {
   try {
-    // Étape 1 : Récupérer le type du lieu
-    const lieuType = await prisma.lieu.findUnique({
-      where: { id: BigInt(id) },
-      select: { type: true }
-    });
-
-    if (!lieuType) {
-      return {
-        success: false,
-        error: 'Lieu non trouvé'
-      };
-    }
-
-    // Définir les champs pertinents par type, basés sur les JSON fournis
-    const fieldsByType = {
-      loisirs: [
-        'regionNom','etabImages' ,'prefectureNom', 'communeNom', 'cantonNom', 'etabNom', 'description', 'etabJour',
-        'etabAdresse', 'type', 'geometry', 'status', 'etablissementType'
-      ],
-      hotels: [
-        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
-        'toiletteType', 'type', 'geometry', 'status'
-      ],
-      parcs: [
-        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
-        'etabJour', 'toiletteType', 'etabAdresse', 'type', 'activiteStatut', 'activiteCategorie',
-        'geometry', 'status', 'terrain'
-      ],
-      marches: [
-        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
-        'etabJour', 'type', 'geometry', 'status', 'organisme'
-      ],
-      sites: [
-        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
-        'etabJour', 'etabAdresse', 'type', 'geometry', 'status', 'typeSiteDeux',
-        'ministereTutelle', 'religion'
-      ],
-      zones: [
-        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
-        'type', 'etabCreationDate', 'geometry', 'status'
-      ],
-      supermarches: [
-        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
-        'etabJour', 'toiletteType', 'etabAdresse', 'type', 'activiteStatut', 'activiteCategorie',
-        'etabCreationDate', 'geometry', 'status'
-      ],
-      touristique: [
-        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
-        'etabJour', 'etabAdresse', 'type', 'geometry', 'status'
-      ]
-    };
-
-    // Définir les relations à inclure en fonction du type
-    const relationMap = {
-      loisirs: { loisirs: true },
-      hotels: { hotels: true },
-      parcs: { parcsJardins: true },
-      marches: { marches: true },
-      sites: { sitesNaturels: true },
-      zones: { zonesProtegees: true },
-      supermarches: { supermarchesEtablissement: true },
-      touristique: { etablissementTouristique: true }
-    };
-
-    // Étape 2 : Récupérer le lieu avec les relations pertinentes
+    // Étape 1 : Vérifier si le lieu existe et récupérer son type et les images actuelles
     const lieu = await prisma.lieu.findUnique({
       where: { id: BigInt(id) },
-      include: {
-        images: true,
-        likes: true,
-        favorites: true,
-        ...relationMap[lieuType.type] // Inclure uniquement la relation pertinente
-      }
+      select: { type: true, etabImages: true }
     });
 
     if (!lieu) {
@@ -228,148 +159,57 @@ async getLieuById(id) {
       };
     }
 
-    // Étape 3 : Récupérer la géométrie avec une requête brute
-    const [geometryResult] = await prisma.$queryRaw`
-      SELECT ST_AsEWKT(geometry) AS geometry FROM "Lieu" WHERE id = ${BigInt(id)};
-    `;
-
-    // Étape 4 : Convertir les BigInt et les Date en formats sérialisables
-    const convertToSerializable = (obj) => {
-      if (!obj) return obj;
-      const newObj = { ...obj };
-      if (newObj.id && typeof newObj.id === 'bigint') {
-        newObj.id = newObj.id.toString();
-      }
-      if (newObj.createdAt instanceof Date) {
-        newObj.createdAt = newObj.createdAt.toISOString();
-      }
-      if (newObj.updatedAt instanceof Date) {
-        newObj.updatedAt = newObj.updatedAt.toISOString();
-      }
-      for (const key in newObj) {
-        if (Array.isArray(newObj[key])) {
-          newObj[key] = newObj[key].map(convertToSerializable);
-        } else if (typeof newObj[key] === 'object' && newObj[key] !== null) {
-          newObj[key] = convertToSerializable(newObj[key]);
-        }
-      }
-      return newObj;
-    };
-
-    const convertedLieu = convertToSerializable(lieu);
-
-    // Étape 5 : Filtrer les champs pertinents pour ce type de lieu
-    const pertinentFields = fieldsByType[lieuType.type] || [];
-    const filteredData = {};
-
-    pertinentFields.forEach(field => {
-      if (convertedLieu[field] !== undefined) {
-        filteredData[field] = convertedLieu[field];
-      }
-    });
-
-    // Ajouter les champs communs non listés dans fieldsByType (ex. createdAt, updatedAt, geometry)
-    filteredData.createdAt = convertedLieu.createdAt;
-    filteredData.updatedAt = convertedLieu.updatedAt;
-    filteredData.geometry = geometryResult?.geometry || null;
-
-    // Ajouter la relation pertinente
-    const relationKey = lieuType.type === 'loisirs' ? 'loisirs' :
-                        lieuType.type === 'hotels' ? 'hotels' :
-                        lieuType.type === 'parcs' ? 'parcsJardins' :
-                        lieuType.type === 'marches' ? 'marches' :
-                        lieuType.type === 'sites' ? 'sitesNaturels' :
-                        lieuType.type === 'zones' ? 'zonesProtegees' :
-                        lieuType.type === 'supermarches' ? 'supermarchesEtablissement' :
-                        'etablissementTouristique';
-
-    filteredData[relationKey] = convertedLieu[relationKey];
-
-    // Ajouter les champs généraux (images, likes, favorites)
-    filteredData.images = convertedLieu.images;
-    filteredData.likes = convertedLieu.likes;
-    filteredData.favorites = convertedLieu.favorites;
-
-    return {
-      success: true,
-      data: filteredData
-    };
-  } catch (error) {
-    console.error('Erreur lors de la récupération du lieu:', error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-}
-
-/**
- * Mettre à jour un lieu avec ses données spécifiques
- */
-async updateLieu(id, data) {
-  try {
-    // Étape 1 : Vérifier si le lieu existe et récupérer son type
-    const lieuType = await prisma.lieu.findUnique({
-      where: { id: BigInt(id) },
-      select: { type: true }
-    });
-
-    if (!lieuType) {
-      return {
-        success: false,
-        error: 'Lieu non trouvé'
-      };
-    }
+    console.log('Images existantes dans la base:', lieu.etabImages); // Log pour débogage
 
     // Étape 2 : Valider le type si fourni (ne pas permettre de changer le type)
-    if (data.type && data.type !== lieuType.type) {
+    if (data.type && data.type !== lieu.type) {
       return {
         success: false,
         error: 'Le type du lieu ne peut pas être modifié'
       };
     }
 
-    // Définir les champs pertinents par type, basés sur les JSON fournis
+    // Définir les champs pertinents par type
     const fieldsByType = {
       loisirs: [
-        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'etabNom', 'description',
-        'etabJour', 'etabAdresse', 'type', 'geometry', 'status', 'etablissementType'
+        'etabImages', 'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'etabNom', 'description', 'etabJour',
+        'etabAdresse', 'type', 'geometry', 'status', 'etablissementType'
       ],
       hotels: [
-        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom',
-        'toiletteType', 'description', 'type', 'geometry', 'status'
+        'etabImages', 'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'toiletteType', 'type', 'geometry', 'status'
       ],
       parcs: [
-        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom',
-        'etabJour', 'toiletteType', 'etabAdresse', 'description', 'type', 'activiteStatut',
-        'activiteCategorie', 'geometry', 'status', 'terrain'
+        'etabImages', 'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'etabJour', 'toiletteType', 'etabAdresse', 'type', 'activiteStatut', 'activiteCategorie',
+        'geometry', 'status', 'terrain'
       ],
       marches: [
-        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom',
-        'etabJour', 'description', 'type', 'geometry', 'status', 'organisme'
+        'etabImages', 'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'etabJour', 'type', 'geometry', 'status', 'organisme'
       ],
       sites: [
-        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom',
-        'etabJour', 'etabAdresse', 'description', 'type', 'geometry', 'status', 'typeSiteDeux',
+        'etabImages', 'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'etabJour', 'etabAdresse', 'type', 'geometry', 'status', 'typeSiteDeux',
         'ministereTutelle', 'religion'
       ],
       zones: [
-        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom',
-        'description', 'type', 'etabCreationDate', 'geometry', 'status'
+        'etabImages', 'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'type', 'etabCreationDate', 'geometry', 'status'
       ],
       supermarches: [
-        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom',
-        'etabJour', 'toiletteType', 'etabAdresse', 'description', 'type', 'activiteStatut',
-        'activiteCategorie', 'etabCreationDate', 'geometry', 'status'
+        'etabImages', 'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'etabJour', 'toiletteType', 'etabAdresse', 'type', 'activiteStatut', 'activiteCategorie',
+        'etabCreationDate', 'geometry', 'status'
       ],
       touristique: [
-        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom',
-        'etabJour', 'etabAdresse', 'description', 'type', 'geometry', 'status'
+        'etabImages', 'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'etabJour', 'etabAdresse', 'type', 'geometry', 'status'
       ]
     };
 
     // Étape 3 : Filtrer les données d'entrée pour ne garder que les champs pertinents
-    const pertinentFields = fieldsByType[lieuType.type] || [];
+    const pertinentFields = fieldsByType[lieu.type] || [];
     const filteredData = {};
     pertinentFields.forEach(field => {
       if (data[field] !== undefined) {
@@ -377,7 +217,53 @@ async updateLieu(id, data) {
       }
     });
 
-    console.log('filteredData:', filteredData);
+    // Étape 3.1 : Gérer les images (fusionner existantes et nouvelles)
+    let finalImageUrls = lieu.etabImages || [];
+    // Normaliser les séparateurs dans les images existantes
+    finalImageUrls = finalImageUrls.map(url => {
+      if (typeof url === 'string') {
+        return url.replace(/\\/g, '/');
+      }
+      if (typeof url === 'object' && url !== null) {
+        const pathParts = Object.keys(url)
+          .sort((a, b) => Number.parseInt(a) - Number.parseInt(b))
+          .map(key => url[key]);
+        return pathParts.join('');
+      }
+      console.warn('URL non valide dans images existantes:', url);
+      return '';
+    }).filter(url => typeof url === 'string' && url !== '');
+    console.log('finalImageUrls initial:', finalImageUrls); // Log pour débogage
+
+    // Ajouter les nouvelles images uploadées
+    if (files && files.length > 0) {
+      const newImageUrls = await imageService.processUploadedImages(files);
+      const normalizedNewImageUrls = newImageUrls.map(url => typeof url === 'string' ? url.replace(/\\/g, '/') : url)
+                                                 .filter(url => typeof url === 'string');
+      finalImageUrls = [...finalImageUrls, ...normalizedNewImageUrls];
+      console.log('Nouvelles images ajoutées:', normalizedNewImageUrls); // Log pour débogage
+    }
+
+    // Si data.etabImages est fourni, l'utiliser (après normalisation)
+    if (filteredData.etabImages && Array.isArray(filteredData.etabImages)) {
+      finalImageUrls = filteredData.etabImages.map(imageObj => {
+        if (typeof imageObj === 'string') {
+          return imageObj.replace(/\\/g, '/');
+        }
+        if (typeof imageObj === 'object' && imageObj !== null) {
+          const pathParts = Object.keys(imageObj)
+            .sort((a, b) => Number.parseInt(a) - Number.parseInt(b))
+            .map(key => imageObj[key]);
+          return pathParts.join('');
+        }
+        console.warn('URL non valide dans etabImages:', imageObj);
+        return '';
+      }).filter(url => url !== '');
+      console.log('finalImageUrls mis à jour depuis data.etabImages:', finalImageUrls); // Log pour débogage
+    }
+
+    filteredData.etabImages = finalImageUrls;
+    console.log('filteredData avec images:', filteredData); // Log pour débogage
 
     // Étape 4 : Utilisation d'une transaction pour assurer la cohérence
     const result = await prisma.$transaction(async (tx) => {
@@ -430,7 +316,7 @@ async updateLieu(id, data) {
       }
 
       // Étape 5 : Mettre à jour l'enregistrement spécialisé selon le type
-      switch (lieuType.type) {
+      switch (lieu.type) {
         case 'loisirs':
           if (filteredData.etablissementType) {
             await tx.loisirs.update({
@@ -490,7 +376,7 @@ async updateLieu(id, data) {
           images: true,
           likes: true,
           favorites: true,
-          ...relationMap[lieuType.type]
+          ...relationMap[lieu.type]
         }
       });
 
@@ -502,6 +388,21 @@ async updateLieu(id, data) {
       // Étape 8 : Convertir les BigInt et les Date en formats sérialisables
       const convertToSerializable = (obj) => {
         if (!obj) return obj;
+        if (typeof obj === 'string') return obj;
+        if (Array.isArray(obj)) {
+          return obj.map(item => {
+            if (typeof item === 'object' && item !== null && !Array.isArray(item)) {
+              // Reconstruire les URLs décomposées en objets
+              const pathParts = Object.keys(item)
+                .sort((a, b) => Number.parseInt(a) - Number.parseInt(b))
+                .map(key => item[key]);
+              const path = pathParts.join('');
+              return path ? path.replace(/\\/g, '/') : item;
+            }
+            return convertToSerializable(item);
+          });
+        }
+        if (typeof obj !== 'object' || obj === null) return obj;
         const newObj = { ...obj };
         if (newObj.id && typeof newObj.id === 'bigint') {
           newObj.id = newObj.id.toString();
@@ -536,13 +437,13 @@ async updateLieu(id, data) {
       filteredResponse.updatedAt = convertedLieu.updatedAt;
       filteredResponse.geometry = geometryResult?.geometry || null;
 
-      const relationKey = lieuType.type === 'loisirs' ? 'loisirs' :
-                         lieuType.type === 'hotels' ? 'hotels' :
-                         lieuType.type === 'parcs' ? 'parcsJardins' :
-                         lieuType.type === 'marches' ? 'marches' :
-                         lieuType.type === 'sites' ? 'sitesNaturels' :
-                         lieuType.type === 'zones' ? 'zonesProtegees' :
-                         lieuType.type === 'supermarches' ? 'supermarchesEtablissement' :
+      const relationKey = lieu.type === 'loisirs' ? 'loisirs' :
+                         lieu.type === 'hotels' ? 'hotels' :
+                         lieu.type === 'parcs' ? 'parcsJardins' :
+                         lieu.type === 'marches' ? 'marches' :
+                         lieu.type === 'sites' ? 'sitesNaturels' :
+                         lieu.type === 'zones' ? 'zonesProtegees' :
+                         lieu.type === 'supermarches' ? 'supermarchesEtablissement' :
                          'etablissementTouristique';
 
       filteredResponse[relationKey] = convertedLieu[relationKey];
@@ -550,16 +451,102 @@ async updateLieu(id, data) {
       filteredResponse.likes = convertedLieu.likes;
       filteredResponse.favorites = convertedLieu.favorites;
 
+      console.log('Lieu mis à jour dans la base:', filteredResponse.etabImages); // Log pour débogage
       return filteredResponse;
     });
 
     return {
       success: true,
       data: result,
-      message: `Lieu de type ${lieuType.type} mis à jour avec succès`
+      message: `Lieu de type ${lieu.type} mis à jour avec succès`
     };
   } catch (error) {
     console.error('Erreur lors de la mise à jour du lieu:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+async getLieuById(id) {
+  try {
+    const lieu = await prisma.lieu.findUnique({
+      where: { id: BigInt(id) },
+      include: {
+        images: true,
+        likes: true,
+        favorites: true,
+        loisirs: true,
+        hotels: true,
+        parcsJardins: true,
+        marches: true,
+        sitesNaturels: true,
+        zonesProtegees: true,
+        supermarchesEtablissement: true,
+        etablissementTouristique: true
+      }
+    });
+
+    if (!lieu) {
+      return {
+        success: false,
+        error: 'Lieu non trouvé'
+      };
+    }
+
+    // Récupérer la géométrie au format EWKT
+    const [geometryResult] = await prisma.$queryRaw`
+      SELECT ST_AsEWKT(geometry) AS geometry FROM "Lieu" WHERE id = ${BigInt(id)};
+    `;
+
+    // Convertir les BigInt et les Date en formats sérialisables
+    const convertToSerializable = (obj) => {
+      if (!obj) return obj;
+      if (typeof obj === 'string') return obj;
+      if (Array.isArray(obj)) {
+        return obj.map(item => {
+          if (typeof item === 'object' && item !== null && !Array.isArray(item)) {
+            // Reconstruire les URLs décomposées en objets
+            const pathParts = Object.keys(item)
+              .sort((a, b) => Number.parseInt(a) - Number.parseInt(b))
+              .map(key => item[key]);
+            const path = pathParts.join('');
+            return path ? path.replace(/\\/g, '/') : item;
+          }
+          return convertToSerializable(item);
+        });
+      }
+      if (typeof obj !== 'object' || obj === null) return obj;
+      const newObj = { ...obj };
+      if (newObj.id && typeof newObj.id === 'bigint') {
+        newObj.id = newObj.id.toString();
+      }
+      if (newObj.createdAt instanceof Date) {
+        newObj.createdAt = newObj.createdAt.toISOString();
+      }
+      if (newObj.updatedAt instanceof Date) {
+        newObj.updatedAt = newObj.updatedAt.toISOString();
+      }
+      for (const key in newObj) {
+        if (Array.isArray(newObj[key])) {
+          newObj[key] = newObj[key].map(convertToSerializable);
+        } else if (typeof newObj[key] === 'object' && newObj[key] !== null) {
+          newObj[key] = convertToSerializable(newObj[key]);
+        }
+      }
+      return newObj;
+    };
+
+    const convertedLieu = convertToSerializable(lieu);
+    convertedLieu.geometry = geometryResult?.geometry || null;
+
+    return {
+      success: true,
+      data: convertedLieu
+    };
+  } catch (error) {
+    console.error('Erreur lors de la récupération du lieu:', error);
     return {
       success: false,
       error: error.message
@@ -616,7 +603,7 @@ async updateLieu(id, data) {
     }
   }
 
-  /**
+/**
  * Récupérer tous les lieux disponibles avec leurs données spécialisées
  */
 async getAllLieux() {
@@ -624,38 +611,38 @@ async getAllLieux() {
     // Définir les champs pertinents par type
     const fieldsByType = {
       loisirs: [
-        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'etabNom', 'description', 'etabJour',
+        'id','etabImages','regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'etabNom', 'description', 'etabJour',
         'etabAdresse', 'type', 'geometry', 'status', 'etablissementType'
       ],
       hotels: [
-        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'id','etabImages','regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
         'toiletteType', 'type', 'geometry', 'status'
       ],
       parcs: [
-        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'id','etabImages','regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
         'etabJour', 'toiletteType', 'etabAdresse', 'type', 'activiteStatut', 'activiteCategorie',
         'geometry', 'status', 'terrain'
       ],
       marches: [
-        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'id','etabImages','regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
         'etabJour', 'type', 'geometry', 'status', 'organisme'
       ],
       sites: [
-        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+       'id','etabImages', 'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
         'etabJour', 'etabAdresse', 'type', 'geometry', 'status', 'typeSiteDeux',
         'ministereTutelle', 'religion'
       ],
       zones: [
-        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+       'id','etabImages', 'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
         'type', 'etabCreationDate', 'geometry', 'status'
       ],
       supermarches: [
-        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'id','etabImages','regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
         'etabJour', 'toiletteType', 'etabAdresse', 'type', 'activiteStatut', 'activiteCategorie',
         'etabCreationDate', 'geometry', 'status'
       ],
       touristique: [
-        'regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
+        'id','etabImages','regionNom', 'prefectureNom', 'communeNom', 'cantonNom', 'nomLocalite', 'etabNom', 'description',
         'etabJour', 'etabAdresse', 'type', 'geometry', 'status'
       ]
     };
@@ -674,21 +661,26 @@ async getAllLieux() {
 
     // Étape 1 : Récupérer tous les lieux avec leurs relations
     const lieux = await prisma.lieu.findMany({
-      where: { status: true }, // Ne récupérer que les lieux actifs
-      include: {
-        images: true,
-        likes: true,
-        favorites: true,
-        loisirs: true,
-        hotels: true,
-        parcsJardins: true,
-        marches: true,
-        sitesNaturels: true,
-        zonesProtegees: true,
-        supermarchesEtablissement: true,
-        etablissementTouristique: true
-      }
-    });
+      where: {
+        status: true,
+        NOT: {
+          etabNom: { in: ["Bar", "Nsp", "Bar Sans Nom"] }
+        }
+      },
+    include: {
+      images: true,
+      likes: true,
+      favorites: true,
+      loisirs: true,
+      hotels: true,
+      parcsJardins: true,
+      marches: true,
+      sitesNaturels: true,
+      zonesProtegees: true,
+      supermarchesEtablissement: true,
+      etablissementTouristique: true
+    }
+});
 
     // Étape 2 : Récupérer la géométrie pour chaque lieu
     const lieuxWithGeometry = await Promise.all(lieux.map(async (lieu) => {

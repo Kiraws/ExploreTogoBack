@@ -2,11 +2,10 @@
 // Dans un fichier services/ImageService.js
 const fs = require('fs').promises;
 const path = require('path');
-
 class ImageService {
   constructor() {
     this.uploadsDir = path.join(__dirname, '../uploads/lieux');
-    this.baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    this.baseUrl = process.env.BASE_URL || 'http://localhost:3030';
   }
 
   /**
@@ -18,29 +17,30 @@ class ImageService {
     }
 
     return files.map(file => {
-      return `${this.baseUrl}/uploads/lieux/${file.filename}`;
+      return `E:/Open Data Science/ExploreTogoBack/uploads/lieux/${file.filename}`;
     });
   }
 
   /**
    * Supprimer une image du serveur
    */
-  async deleteImage(imageUrl) {
+async deleteImage(imageUrl) {
+  try {
+    const filename = path.basename(imageUrl);
+    const filePath = path.join(this.uploadsDir, filename);
     try {
-      // Extraire le nom du fichier de l'URL
-      const filename = path.basename(imageUrl);
-      const filePath = path.join(this.uploadsDir, filename);
-      
-      // Vérifier si le fichier existe avant de le supprimer
-      await fs.access(filePath);
-      await fs.unlink(filePath);
-      
-      return { success: true, message: 'Image supprimée avec succès' };
-    } catch (error) {
-      console.error('Erreur lors de la suppression de l\'image:', error);
-      return { success: false, error: error.message };
+      await fs.access(filePath); // Vérifie si le fichier existe
+    } catch (accessError) {
+      console.log(`Fichier non trouvé, ignoré : ${filePath}`);
+      return { success: true, message: 'Fichier non trouvé, ignoré' };
     }
+    await fs.unlink(filePath);
+    return { success: true, message: 'Image supprimée avec succès' };
+  } catch (error) {
+    console.error('Erreur lors de la suppression de l\'image:', error);
+    return { success: false, error: error.message };
   }
+}
 
   /**
    * Supprimer plusieurs images

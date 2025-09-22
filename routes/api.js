@@ -42,7 +42,8 @@ router.patch('/lieux/:id/desactivate', validateId, lieuController.desactivateLie
 router.get('/lieux', lieuController.getAllLieux);
 // ==================== ROUTES USER ====================
 router.get('/users/:id', userController.getUser);
-
+router.get('/users', userController.getAllUsers); // liste des utilisateurs
+router.put('/users/:id/desactivate', userController.desactivateUser);
 // ==================== ROUTES LOISIRS ====================
 // Routes spécifiques aux loisirs
 router.put('/loisirs/:id', validateId, loisirsController.updateLoisir);

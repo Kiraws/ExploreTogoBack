@@ -10,7 +10,9 @@
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",
     "@prisma/client": "^6.14.0",
+    "axios": "^1.11.0",
     "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
     "express": "^4.21.2",
     "express-session": "^1.18.2",
     "jsonwebtoken": "^9.0.2",
