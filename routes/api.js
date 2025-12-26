@@ -49,6 +49,7 @@ router.put('/users/:id/desactivate', userController.desactivateUser);
 router.put('/loisirs/:id', validateId, loisirsController.updateLoisir);
 router.get('/loisirs/:id', validateId, loisirsController.getLoisir);
 
+
 // Routes des menus pour les loisirs
 router.post('/loisirs/:id/menus', validateId, loisirsController.createMenu);
 router.get('/loisirs/:id/menus', validateId, loisirsController.getMenus);
@@ -60,6 +61,7 @@ router.post('/categories/:categorieId/plats', menuController.createPlat);
 // ==================== ROUTES LIKES ====================
 router.post('/lieux/:id/likes', validateId, likesController.addLike);
 router.delete('/lieux/:id/likes', validateId, likesController.removeLike);
+router.get('/likes', likesController.getLikedPlaces); // 👈 nouvelle route
 
 // ==================== ROUTES MARCHES ====================
 router.get('/marches/:id', validateId, marchesController.getMarche);

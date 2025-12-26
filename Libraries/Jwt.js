@@ -4,7 +4,7 @@ require('dotenv').config();
 class JwtService {
   constructor() {
     this.secret = process.env.JWT_SECRET;
-    this.expiresIn = process.env.JWT_EXPIRES_IN || '1h'; // Durée par défaut : 1 heure
+    this.expiresIn = process.env.JWT_EXPIRES_IN || '168h'; // Durée par défaut : 1 heure
   }
 
   generateToken(payload) {

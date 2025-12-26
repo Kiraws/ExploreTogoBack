@@ -10,7 +10,8 @@ class ImageService {
 
   /**
    * Traiter les fichiers uploadés et retourner les URLs
-   */
+  */
+
   async processUploadedImages(files) {
     if (!files || files.length === 0) {
       return [];

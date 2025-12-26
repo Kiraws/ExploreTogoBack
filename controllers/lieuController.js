@@ -14,6 +14,21 @@ const {
   touristiqueSchema
 } = require('../schemas/apiShema');
 
+// Fonction utilitaire pour sérialiser les BigInt récursivement
+function serializeBigInt(obj) {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === 'bigint') return obj.toString();
+  if (obj instanceof Date) return obj.toISOString();
+  if (Array.isArray(obj)) return obj.map(serializeBigInt);
+  if (typeof obj === 'object') {
+    const serialized = {};
+    for (const key in obj) {
+      serialized[key] = serializeBigInt(obj[key]);
+    }
+    return serialized;
+  }
+  return obj;
+}
 /**
  * Créer un lieu avec gestion des images - méthode unifiée
  */
@@ -405,7 +420,9 @@ exports.getLieu = async (req, res) => {
     const result = await lieuService.getLieuById(id);
 
     if (result.success) {
-      res.status(200).json(result);
+      // Sérialiser les BigInt avant l'envoi
+      const serializedData = serializeBigInt(result);
+      res.status(200).json(serializedData);
     } else {
       res.status(404).json(result);
     }
@@ -450,7 +467,9 @@ exports.getAllLieux = async (req, res) => {
     const result = await lieuService.getAllLieux();
 
     if (result.success) {
-      res.status(200).json(result);
+      // Sérialiser les BigInt avant l'envoi
+      const serializedData = serializeBigInt(result);
+      res.status(200).json(serializedData);
     } else {
       res.status(500).json(result);
     }

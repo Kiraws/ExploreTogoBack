@@ -647,18 +647,6 @@ async getAllLieux() {
       ]
     };
 
-    // Définir les relations à inclure en fonction du type
-    const relationMap = {
-      loisirs: { loisirs: true },
-      hotels: { hotels: true },
-      parcs: { parcsJardins: true },
-      marches: { marches: true },
-      sites: { sitesNaturels: true },
-      zones: { zonesProtegees: true },
-      supermarches: { supermarchesEtablissement: true },
-      touristique: { etablissementTouristique: true }
-    };
-
     // Étape 1 : Récupérer tous les lieux avec leurs relations
     const lieux = await prisma.lieu.findMany({
       where: {
@@ -667,20 +655,20 @@ async getAllLieux() {
           etabNom: { in: ["Bar", "Nsp", "Bar Sans Nom"] }
         }
       },
-    include: {
-      images: true,
-      likes: true,
-      favorites: true,
-      loisirs: true,
-      hotels: true,
-      parcsJardins: true,
-      marches: true,
-      sitesNaturels: true,
-      zonesProtegees: true,
-      supermarchesEtablissement: true,
-      etablissementTouristique: true
-    }
-});
+      include: {
+        images: true,
+        likes: true,
+        favorites: true,
+        loisirs: true,
+        hotels: true,
+        parcsJardins: true,
+        marches: true,
+        sitesNaturels: true,
+        zonesProtegees: true,
+        supermarchesEtablissement: true,
+        etablissementTouristique: true
+      }
+    });
 
     // Étape 2 : Récupérer la géométrie pour chaque lieu
     const lieuxWithGeometry = await Promise.all(lieux.map(async (lieu) => {
@@ -695,7 +683,7 @@ async getAllLieux() {
       if (!obj) return obj;
       const newObj = { ...obj };
       if (newObj.id && typeof newObj.id === 'bigint') {
-        newObj.id = newObj.id.toString();
+        newObj.id = newObj.id.toString(); // Conversion de BigInt en string
       }
       if (newObj.createdAt instanceof Date) {
         newObj.createdAt = newObj.createdAt.toISOString();
@@ -759,7 +747,6 @@ async getAllLieux() {
     };
   }
 }
-
   /**
    * Valider le type de lieu
    */
